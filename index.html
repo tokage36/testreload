@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>なにもない部屋</title>
+<style>
+  :root {
+    --step: 0; /* 再読み込み回数(0〜5)。背景がわずかに明るくなる */
+    --bg: hsl(215 24% calc(12% + var(--step) * 2.4%));
+    --fg: #e6e9ee;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+    display: grid;
+    place-items: center;
+    transition: background 0.6s;
+  }
+  main { text-align: center; padding: 0 1.5rem; }
+  #msg { font-size: 1.1rem; line-height: 2; letter-spacing: 0.15em; margin: 0; }
+  #pw {
+    font-size: clamp(2rem, 9vw, 3.5rem);
+    letter-spacing: 0.3em;
+    margin: 0;
+    animation: appear 1.6s ease-out both;
+  }
+  #pw small { display: block; font-size: 0.9rem; letter-spacing: 0.2em; opacity: 0.6; margin-bottom: 1rem; }
+  [hidden] { display: none; }
+  @keyframes appear { from { opacity: 0; filter: blur(8px); } to { opacity: 1; filter: blur(0); } }
+  @media (prefers-reduced-motion: reduce) { #pw { animation: none; } body { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <p id="msg">ここには、なにもない。<br>けれど、もう一度ひらき直せば、<br>すこしだけ違って見えるかもしれない。</p>
+  <p id="pw" hidden><small>あいことば</small><span id="pwText"></span></p>
+</main>
+
+<script>
+(function () {
+  var NEED = 5;                       // 必要な再読み込み回数
+  var PASSWORD = atob('RUNITw==');    // ソースを見れば分かるので、ここは割り切り(ECHO)
+  var KEY_COUNT = 'nazo1_reloads';
+  var KEY_DONE = 'nazo1_done';
+
+  // localStorage が使えない環境(プライベートモード等)でも落ちないようにする
+  var mem = {};
+  function get(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] || null; } }
+  function set(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+  function del(k) { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
+
+  // テスト用: URLの末尾に ?reset を付けて開くと最初からやり直せる(公開前に消す)
+  if (location.search === '?reset') {
+    del(KEY_COUNT); del(KEY_DONE);
+    history.replaceState(null, '', location.pathname);
+  }
+
+  // 「再読み込み」で開かれたかどうか
+  function isReload() {
+    var nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+    if (nav) return nav.type === 'reload';
+    return !!(performance.navigation && performance.navigation.type === 1);
+  }
+
+  var count = Number(get(KEY_COUNT) || 0);
+  if (!get(KEY_DONE) && isReload()) {
+    count += 1;
+    set(KEY_COUNT, String(count));
+  }
+
+  document.documentElement.style.setProperty('--step', Math.min(count, NEED));
+
+  if (get(KEY_DONE) || count >= NEED) {
+    set(KEY_DONE, '1');
+    document.getElementById('msg').hidden = true;
+    document.getElementById('pwText').textContent = PASSWORD;
+    document.getElementById('pw').hidden = false;
+  }
+})();
+</script>
+</body>
+</html>
